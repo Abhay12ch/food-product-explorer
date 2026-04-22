@@ -6,9 +6,36 @@ import type {
 } from "@/types";
 
 /* ────────────────────────────────────────────
-   OpenFoodFacts API base URL
+   Dual-mode API: server-side calls OpenFoodFacts
+   directly; client-side goes through /api proxy
+   routes to avoid CORS.
    ──────────────────────────────────────────── */
-const BASE = "https://world.openfoodfacts.org";
+
+const EXT = "https://world.openfoodfacts.org";
+
+function isServer() {
+  return typeof window === "undefined";
+}
+
+/** Fetch with retry (up to 2 retries on 5xx / network errors) */
+async function resilientFetch(url: string, retries = 2): Promise<Response> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return res;
+      // Retry on 5xx
+      if (res.status >= 500 && i < retries) {
+        await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+        continue;
+      }
+      return res; // Return non-retryable error response
+    } catch (err) {
+      if (i === retries) throw err;
+      await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+    }
+  }
+  throw new Error("Fetch failed after retries");
+}
 
 /* ────────────────────────────────────────────
    Search by product name
@@ -18,10 +45,11 @@ export async function searchByName(
   page = 1,
   pageSize = 24
 ): Promise<SearchResponse> {
-  const url = `${BASE}/cgi/search.pl?search_terms=${encodeURIComponent(
-    term
-  )}&json=true&page=${page}&page_size=${pageSize}`;
-  const res = await fetch(url);
+  const url = isServer()
+    ? `${EXT}/cgi/search.pl?search_terms=${encodeURIComponent(term)}&json=true&page=${page}&page_size=${pageSize}`
+    : `/api/search?term=${encodeURIComponent(term)}&page=${page}&page_size=${pageSize}`;
+
+  const res = await resilientFetch(url);
   if (!res.ok) throw new Error(`Search failed: ${res.status}`);
   return res.json();
 }
@@ -32,8 +60,11 @@ export async function searchByName(
 export async function fetchProductByBarcode(
   barcode: string
 ): Promise<ProductDetailResponse> {
-  const url = `${BASE}/api/v0/product/${barcode}.json`;
-  const res = await fetch(url);
+  const url = isServer()
+    ? `${EXT}/api/v0/product/${barcode}.json`
+    : `/api/product/${barcode}`;
+
+  const res = await resilientFetch(url);
   if (!res.ok) throw new Error(`Product fetch failed: ${res.status}`);
   return res.json();
 }
@@ -46,10 +77,11 @@ export async function fetchByCategory(
   page = 1,
   pageSize = 24
 ): Promise<{ products: Product[]; count: number }> {
-  const url = `${BASE}/category/${encodeURIComponent(
-    category
-  )}.json?page=${page}&page_size=${pageSize}`;
-  const res = await fetch(url);
+  const url = isServer()
+    ? `${EXT}/category/${encodeURIComponent(category)}.json?page=${page}&page_size=${pageSize}`
+    : `/api/category/${encodeURIComponent(category)}?page=${page}&page_size=${pageSize}`;
+
+  const res = await resilientFetch(url);
   if (!res.ok) throw new Error(`Category fetch failed: ${res.status}`);
   const data = await res.json();
   return { products: data.products ?? [], count: data.count ?? 0 };
@@ -59,8 +91,9 @@ export async function fetchByCategory(
    Fetch popular categories
    ──────────────────────────────────────────── */
 export async function fetchCategories(): Promise<CategoriesResponse> {
-  const url = `${BASE}/categories.json`;
-  const res = await fetch(url);
+  const url = isServer() ? `${EXT}/categories.json` : `/api/categories`;
+
+  const res = await resilientFetch(url);
   if (!res.ok) throw new Error(`Categories fetch failed: ${res.status}`);
   return res.json();
 }

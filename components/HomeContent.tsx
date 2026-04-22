@@ -93,8 +93,8 @@ export default function HomeContent() {
           return;
         }
 
-        // Name search (or default popular products)
-        const term = searchTerm || "popular";
+        // Name search (or default homepage products)
+        const term = searchTerm || "a";
         const data = await searchByName(term, pageNum, PAGE_SIZE);
         if (append) {
           setProducts((prev) => [...prev, ...data.products]);
@@ -141,11 +141,19 @@ export default function HomeContent() {
 
       {/* Error state */}
       {error && (
-        <div className="mt-8 flex items-center gap-3 rounded-xl border border-rose-500/20 bg-rose-500/[0.06] px-5 py-4 text-sm text-rose-300">
-          <svg className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-          </svg>
-          {error}
+        <div className="mt-8 flex items-center justify-between rounded-xl border border-rose-500/20 bg-rose-500/[0.06] px-5 py-4 text-sm text-rose-300">
+          <div className="flex items-center gap-3">
+            <svg className="h-5 w-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+            </svg>
+            {error}
+          </div>
+          <button
+            onClick={() => fetchProducts(1, false)}
+            className="ml-4 flex-shrink-0 rounded-lg bg-rose-500/20 px-4 py-1.5 text-xs font-medium text-rose-200 transition-colors hover:bg-rose-500/30"
+          >
+            Retry
+          </button>
         </div>
       )}
 
