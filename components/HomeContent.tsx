@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useExplorer } from "@/context/ExplorerContext";
 import {
   searchByName,
@@ -61,9 +61,14 @@ export default function HomeContent() {
   const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Ref to track the current fetch operation and avoid race conditions
+  const fetchIdRef = useRef(0);
+
   /* Fetch products based on current filters */
   const fetchProducts = useCallback(
     async (pageNum: number, append = false) => {
+      const currentFetchId = ++fetchIdRef.current;
+
       setLoading(true);
       setError(null);
 
@@ -71,6 +76,8 @@ export default function HomeContent() {
         // Barcode search
         if (searchTerm && isBarcode(searchTerm)) {
           const data = await fetchProductByBarcode(searchTerm.trim());
+          // Abort if a newer fetch was started
+          if (currentFetchId !== fetchIdRef.current) return;
           if (data.status === 1 && data.product) {
             setProducts([{ ...data.product, code: data.code }]);
             setTotalCount(1);
@@ -84,6 +91,7 @@ export default function HomeContent() {
         // Category filter
         if (category && !searchTerm) {
           const data = await fetchByCategory(category, pageNum, PAGE_SIZE);
+          if (currentFetchId !== fetchIdRef.current) return;
           if (append) {
             setProducts((prev) => [...prev, ...data.products]);
           } else {
@@ -96,6 +104,7 @@ export default function HomeContent() {
         // Name search (or default homepage products)
         const term = searchTerm || "a";
         const data = await searchByName(term, pageNum, PAGE_SIZE);
+        if (currentFetchId !== fetchIdRef.current) return;
         if (append) {
           setProducts((prev) => [...prev, ...data.products]);
         } else {
@@ -103,10 +112,15 @@ export default function HomeContent() {
         }
         setTotalCount(data.count);
       } catch (err) {
+        if (currentFetchId !== fetchIdRef.current) return;
+        // Don't clear existing products on error — just show the error banner
+        // so users can still see previously loaded products
         setError(err instanceof Error ? err.message : "Something went wrong");
       } finally {
-        setLoading(false);
-        setInitialLoad(false);
+        if (currentFetchId === fetchIdRef.current) {
+          setLoading(false);
+          setInitialLoad(false);
+        }
       }
     },
     [searchTerm, category]
@@ -177,7 +191,7 @@ export default function HomeContent() {
       )}
 
       {/* Empty state */}
-      {!loading && !initialLoad && sorted.length === 0 && (
+      {!loading && !initialLoad && sorted.length === 0 && !error && (
         <div className="mt-16 flex flex-col items-center gap-4 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-white/[0.04] ring-1 ring-white/[0.08]">
             <svg className="h-10 w-10 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">

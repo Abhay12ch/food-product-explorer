@@ -20,8 +20,11 @@ function isServer() {
 /** Fetch with retry (up to 2 retries on 5xx / network errors) */
 async function resilientFetch(url: string, retries = 2): Promise<Response> {
   for (let i = 0; i <= retries; i++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000);
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
       if (res.ok) return res;
       // Retry on 5xx
       if (res.status >= 500 && i < retries) {
@@ -30,6 +33,7 @@ async function resilientFetch(url: string, retries = 2): Promise<Response> {
       }
       return res; // Return non-retryable error response
     } catch (err) {
+      clearTimeout(timeout);
       if (i === retries) throw err;
       await new Promise((r) => setTimeout(r, 800 * (i + 1)));
     }
