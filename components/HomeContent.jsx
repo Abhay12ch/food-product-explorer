@@ -41,6 +41,7 @@ export default function HomeContent() {
   const [initialLoad, setInitialLoad] = useState(true);
   const [error, setError] = useState(null);
   const fetchIdRef = useRef(0);
+  const retryCountRef = useRef(0);
 
   const fetchProducts = useCallback(
     async (pageNum, append = false) => {
@@ -89,7 +90,18 @@ export default function HomeContent() {
         setTotalCount(data.count);
       } catch (err) {
         if (currentFetchId !== fetchIdRef.current) return;
-        setError(err instanceof Error ? err.message : "Something went wrong");
+        const msg = err instanceof Error ? err.message : "Something went wrong";
+        setError(msg);
+        // Auto-retry on initial load failure (API throttling)
+        if (!append && products.length === 0 && retryCountRef.current < 3) {
+          retryCountRef.current++;
+          setError(`API temporarily unavailable — retrying (${retryCountRef.current}/3)…`);
+          setTimeout(() => {
+            if (fetchIdRef.current === currentFetchId) {
+              fetchProducts(pageNum, false);
+            }
+          }, 3000);
+        }
       } finally {
         if (currentFetchId === fetchIdRef.current) {
           setLoading(false);
@@ -97,10 +109,12 @@ export default function HomeContent() {
         }
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [searchTerm, category]
   );
 
   useEffect(() => {
+    retryCountRef.current = 0;
     setPage(1);
     fetchProducts(1, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
