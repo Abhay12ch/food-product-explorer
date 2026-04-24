@@ -1,7 +1,9 @@
 # 🍔 Food Product Explorer
 
 A responsive food product discovery app powered by the **OpenFoodFacts** open database. Search by name or barcode, filter by category, sort by nutrition grade, explore detailed product information, and add items to your cart — all wrapped in a sleek, premium dark-themed UI.
-It took me 2 days to complete this project while dealing with the API fallback and slowdown errors. 
+
+It took me 2 days to complete this project while dealing with the API fallback and slowdown errors.
+
 ![Next.js](https://img.shields.io/badge/Next.js-16-black?logo=next.js)
 ![JavaScript](https://img.shields.io/badge/JavaScript-ES2022-F7DF1E?logo=javascript)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4-06B6D4?logo=tailwindcss)
