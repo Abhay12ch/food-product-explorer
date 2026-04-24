@@ -17,8 +17,8 @@ function isServer() {
   return typeof window === "undefined";
 }
 
-/** Fetch with retry (up to 2 retries on 5xx / network errors) */
-async function resilientFetch(url: string, retries = 2): Promise<Response> {
+/** Fetch with retry (1 retry on 5xx / network errors to avoid rate-limit escalation) */
+async function resilientFetch(url: string, retries = 1): Promise<Response> {
   for (let i = 0; i <= retries; i++) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 12000);
@@ -28,14 +28,14 @@ async function resilientFetch(url: string, retries = 2): Promise<Response> {
       if (res.ok) return res;
       // Retry on 5xx
       if (res.status >= 500 && i < retries) {
-        await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+        await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
         continue;
       }
       return res; // Return non-retryable error response
     } catch (err) {
       clearTimeout(timeout);
       if (i === retries) throw err;
-      await new Promise((r) => setTimeout(r, 800 * (i + 1)));
+      await new Promise((r) => setTimeout(r, 1000 * (i + 1)));
     }
   }
   throw new Error("Fetch failed after retries");
@@ -75,6 +75,8 @@ export async function fetchProductByBarcode(
 
 /* ────────────────────────────────────────────
    Fetch products by category
+   Uses the search endpoint with category tag filter
+   instead of the flaky /category/ endpoint.
    ──────────────────────────────────────────── */
 export async function fetchByCategory(
   category: string,
@@ -82,7 +84,7 @@ export async function fetchByCategory(
   pageSize = 24
 ): Promise<{ products: Product[]; count: number }> {
   const url = isServer()
-    ? `${EXT}/category/${encodeURIComponent(category)}.json?page=${page}&page_size=${pageSize}`
+    ? `${EXT}/cgi/search.pl?tagtype_0=categories&tag_contains_0=contains&tag_0=${encodeURIComponent(category)}&json=true&page=${page}&page_size=${pageSize}`
     : `/api/category/${encodeURIComponent(category)}?page=${page}&page_size=${pageSize}`;
 
   const res = await resilientFetch(url);

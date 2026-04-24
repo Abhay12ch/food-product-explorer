@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCart } from "@/context/CartContext";
 import type { Product } from "@/types";
 
 /* ─── Nutrition-grade colour mapping ─── */
@@ -21,6 +22,9 @@ const gradeBg: Record<string, string> = {
 };
 
 export default function ProductCard({ product }: { product: Product }) {
+  const { addItem, isInCart } = useCart();
+  const inCart = isInCart(product.code);
+
   const name = product.product_name || "Unknown Product";
   const grade = (
     product.nutrition_grades ||
@@ -31,6 +35,12 @@ export default function ProductCard({ product }: { product: Product }) {
   const category = product.categories?.split(",")[0]?.trim() || "Uncategorized";
   const ingredients =
     product.ingredients_text || product.ingredients_text_en || "";
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem(product);
+  };
 
   return (
     <Link
@@ -77,6 +87,32 @@ export default function ProductCard({ product }: { product: Product }) {
             {grade.toUpperCase()}
           </div>
         )}
+
+        {/* Add to Cart overlay button */}
+        <button
+          onClick={handleAddToCart}
+          className={`absolute bottom-3 right-3 flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold shadow-lg backdrop-blur-xl transition-all duration-300 ${
+            inCart
+              ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-500/30 opacity-100"
+              : "bg-indigo-500/20 text-indigo-200 ring-1 ring-indigo-500/30 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0"
+          }`}
+        >
+          {inCart ? (
+            <>
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              In Cart
+            </>
+          ) : (
+            <>
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Add to Cart
+            </>
+          )}
+        </button>
 
         {/* Gradient overlay */}
         {grade && (

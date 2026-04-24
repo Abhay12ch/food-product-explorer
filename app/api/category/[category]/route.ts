@@ -1,28 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchWithRetry, validatePage, validatePageSize } from "@/lib/fetchWithRetry";
 
 const BASE = "https://world.openfoodfacts.org";
 
-async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
-  for (let i = 0; i <= retries; i++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "FoodProductExplorer/1.0 (contact@example.com)",
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (res.ok || res.status < 500) return res;
-      if (i < retries) await new Promise((r) => setTimeout(r, 800 * (i + 1)));
-    } catch (err) {
-      clearTimeout(timeout);
-      if (i === retries) throw err;
-      await new Promise((r) => setTimeout(r, 800 * (i + 1)));
-    }
+/* ─── In-memory cache ─── */
+interface CacheEntry {
+  data: unknown;
+  timestamp: number;
+}
+const cache = new Map<string, CacheEntry>();
+const CACHE_TTL = 120_000; // 2 minutes
+
+function getCached(key: string): unknown | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    cache.delete(key);
+    return null;
   }
-  throw new Error("Fetch failed after retries");
+  return entry.data;
+}
+
+function setCache(key: string, data: unknown) {
+  if (cache.size > 50) {
+    const oldest = cache.keys().next().value;
+    if (oldest) cache.delete(oldest);
+  }
+  cache.set(key, { data, timestamp: Date.now() });
 }
 
 export async function GET(
@@ -31,13 +35,23 @@ export async function GET(
 ) {
   const { category } = await params;
   const { searchParams } = request.nextUrl;
-  const page = searchParams.get("page") || "1";
-  const pageSize = searchParams.get("page_size") || "24";
+  const page = validatePage(searchParams.get("page"));
+  const pageSize = validatePageSize(searchParams.get("page_size"));
+
+  const cacheKey = `cat:${category}:${page}:${pageSize}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    return NextResponse.json(cached, {
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+    });
+  }
 
   try {
-    const url = `${BASE}/category/${encodeURIComponent(
+    /* Use the search endpoint with category tag filter instead of the
+       flaky /category/ endpoint which frequently returns 503. */
+    const url = `${BASE}/cgi/search.pl?tagtype_0=categories&tag_contains_0=contains&tag_0=${encodeURIComponent(
       category
-    )}.json?page=${page}&page_size=${pageSize}`;
+    )}&json=true&page=${page}&page_size=${pageSize}`;
     const res = await fetchWithRetry(url);
     if (!res.ok) {
       return NextResponse.json(
@@ -46,10 +60,12 @@ export async function GET(
       );
     }
     const data = await res.json();
-    return NextResponse.json({
+    const result = {
       products: data.products ?? [],
       count: data.count ?? 0,
-    }, {
+    };
+    setCache(cacheKey, result);
+    return NextResponse.json(result, {
       headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
     });
   } catch (error) {

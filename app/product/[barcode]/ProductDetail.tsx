@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useCart } from "@/context/CartContext";
 import type { Product } from "@/types";
 
 /* ─── Nutrition-grade colour mapping ─── */
@@ -110,6 +111,8 @@ export default function ProductDetail({
   error,
   barcode,
 }: ProductDetailProps) {
+  const { addItem, isInCart } = useCart();
+  const inCart = product ? isInCart(product.code) : false;
   if (error || !product) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
@@ -300,6 +303,33 @@ export default function ProductDetail({
                 {barcode}
               </span>
             </div>
+
+            {/* Add to Cart button */}
+            <button
+              id="add-to-cart-detail"
+              onClick={() => addItem(product)}
+              className={`mt-5 inline-flex items-center gap-2.5 rounded-xl px-6 py-3 text-sm font-semibold shadow-lg transition-all duration-300 ${
+                inCart
+                  ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-500/30 hover:bg-emerald-500/25"
+                  : "bg-gradient-to-r from-indigo-500 to-violet-500 text-white shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02]"
+              }`}
+            >
+              {inCart ? (
+                <>
+                  <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Added to Cart
+                </>
+              ) : (
+                <>
+                  <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z" />
+                  </svg>
+                  Add to Cart
+                </>
+              )}
+            </button>
           </div>
 
           {/* Category */}

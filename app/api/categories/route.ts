@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 const BASE = "https://world.openfoodfacts.org";
 
@@ -27,33 +28,10 @@ const FALLBACK_CATEGORIES = [
   { id: "en:breakfasts", name: "Breakfasts", url: "", products: 40000 },
 ];
 
-async function fetchWithRetry(url: string, retries = 1): Promise<Response> {
-  for (let i = 0; i <= retries; i++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8000);
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "FoodProductExplorer/1.0 (contact@example.com)",
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (res.ok || res.status < 500) return res;
-      if (i < retries) await new Promise((r) => setTimeout(r, 800 * (i + 1)));
-    } catch (err) {
-      clearTimeout(timeout);
-      if (i === retries) throw err;
-      await new Promise((r) => setTimeout(r, 800 * (i + 1)));
-    }
-  }
-  throw new Error("Fetch failed after retries");
-}
-
 export async function GET() {
   try {
     const url = `${BASE}/categories.json`;
-    const res = await fetchWithRetry(url);
+    const res = await fetchWithRetry(url, { retries: 1, timeoutMs: 8000 });
     if (!res.ok) {
       // Return fallback on HTTP error
       return NextResponse.json(

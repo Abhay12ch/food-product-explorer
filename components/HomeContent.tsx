@@ -90,15 +90,30 @@ export default function HomeContent() {
 
         // Category filter
         if (category && !searchTerm) {
-          const data = await fetchByCategory(category, pageNum, PAGE_SIZE);
-          if (currentFetchId !== fetchIdRef.current) return;
-          if (append) {
-            setProducts((prev) => [...prev, ...data.products]);
-          } else {
-            setProducts(data.products);
+          try {
+            const data = await fetchByCategory(category, pageNum, PAGE_SIZE);
+            if (currentFetchId !== fetchIdRef.current) return;
+            if (append) {
+              setProducts((prev) => [...prev, ...data.products]);
+            } else {
+              setProducts(data.products);
+            }
+            setTotalCount(data.count);
+            return;
+          } catch {
+            // Fallback: use category name as a search term if the
+            // category endpoint fails (OpenFoodFacts rate-limits it frequently)
+            if (currentFetchId !== fetchIdRef.current) return;
+            const data = await searchByName(category, pageNum, PAGE_SIZE);
+            if (currentFetchId !== fetchIdRef.current) return;
+            if (append) {
+              setProducts((prev) => [...prev, ...data.products]);
+            } else {
+              setProducts(data.products);
+            }
+            setTotalCount(data.count);
+            return;
           }
-          setTotalCount(data.count);
-          return;
         }
 
         // Name search (or default homepage products)

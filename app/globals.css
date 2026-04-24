@@ -113,3 +113,21 @@ select option {
   background: #0f1729;
   color: #e2e8f0;
 }
+
+/* ─── Cart badge pop-in animation ─── */
+@keyframes badge-pop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-in {
+  animation: badge-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}

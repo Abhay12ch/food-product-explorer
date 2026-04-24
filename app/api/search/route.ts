@@ -1,35 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchWithRetry, validatePage, validatePageSize } from "@/lib/fetchWithRetry";
 
 const BASE = "https://world.openfoodfacts.org";
 
-async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
-  for (let i = 0; i <= retries; i++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "FoodProductExplorer/1.0 (contact@example.com)",
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (res.ok || res.status < 500) return res;
-      if (i < retries) await new Promise((r) => setTimeout(r, 800 * (i + 1)));
-    } catch (err) {
-      clearTimeout(timeout);
-      if (i === retries) throw err;
-      await new Promise((r) => setTimeout(r, 800 * (i + 1)));
-    }
+/* ─── In-memory cache to avoid hammering OpenFoodFacts ─── */
+interface CacheEntry {
+  data: unknown;
+  timestamp: number;
+}
+const cache = new Map<string, CacheEntry>();
+const CACHE_TTL = 120_000; // 2 minutes
+
+function getCached(key: string): unknown | null {
+  const entry = cache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL) {
+    cache.delete(key);
+    return null;
   }
-  throw new Error("Fetch failed after retries");
+  return entry.data;
+}
+
+function setCache(key: string, data: unknown) {
+  // Keep cache small — evict old entries if > 50
+  if (cache.size > 50) {
+    const oldest = cache.keys().next().value;
+    if (oldest) cache.delete(oldest);
+  }
+  cache.set(key, { data, timestamp: Date.now() });
 }
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const term = searchParams.get("term") || "";
-  const page = searchParams.get("page") || "1";
-  const pageSize = searchParams.get("page_size") || "24";
+  const page = validatePage(searchParams.get("page"));
+  const pageSize = validatePageSize(searchParams.get("page_size"));
+
+  const cacheKey = `search:${term}:${page}:${pageSize}`;
+
+  /* Return cached response if available */
+  const cached = getCached(cacheKey);
+  if (cached) {
+    return NextResponse.json(cached, {
+      headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
+    });
+  }
 
   try {
     const url = `${BASE}/cgi/search.pl?search_terms=${encodeURIComponent(
@@ -43,6 +58,7 @@ export async function GET(request: NextRequest) {
       );
     }
     const data = await res.json();
+    setCache(cacheKey, data);
     return NextResponse.json(data, {
       headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" },
     });

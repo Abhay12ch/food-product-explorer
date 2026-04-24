@@ -1,35 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { fetchWithRetry, isValidBarcode } from "@/lib/fetchWithRetry";
 
 const BASE = "https://world.openfoodfacts.org";
 
-async function fetchWithRetry(url: string, retries = 2): Promise<Response> {
-  for (let i = 0; i <= retries; i++) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    try {
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "FoodProductExplorer/1.0 (contact@example.com)",
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (res.ok || res.status < 500) return res;
-      if (i < retries) await new Promise((r) => setTimeout(r, 800 * (i + 1)));
-    } catch (err) {
-      clearTimeout(timeout);
-      if (i === retries) throw err;
-      await new Promise((r) => setTimeout(r, 800 * (i + 1)));
-    }
-  }
-  throw new Error("Fetch failed after retries");
-}
-
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ barcode: string }> }
 ) {
   const { barcode } = await params;
+
+  /* Validate barcode format */
+  if (!isValidBarcode(barcode)) {
+    return NextResponse.json(
+      { error: "Invalid barcode format. Must be 8-14 digits." },
+      { status: 400 }
+    );
+  }
 
   try {
     const url = `${BASE}/api/v0/product/${barcode}.json`;
