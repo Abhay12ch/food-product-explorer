@@ -6,41 +6,11 @@ import {
   useReducer,
   useEffect,
   useCallback,
-  type ReactNode,
 } from "react";
-import type { Product } from "@/types";
-
-/* ─── Types ─── */
-
-export interface CartItem {
-  product: Product;
-  quantity: number;
-}
-
-interface CartState {
-  items: CartItem[];
-}
-
-type CartAction =
-  | { type: "ADD_ITEM"; product: Product }
-  | { type: "REMOVE_ITEM"; code: string }
-  | { type: "UPDATE_QUANTITY"; code: string; quantity: number }
-  | { type: "CLEAR_CART" }
-  | { type: "HYDRATE"; items: CartItem[] };
-
-interface CartContextValue {
-  items: CartItem[];
-  totalItems: number;
-  addItem: (product: Product) => void;
-  removeItem: (code: string) => void;
-  updateQuantity: (code: string, quantity: number) => void;
-  clearCart: () => void;
-  isInCart: (code: string) => boolean;
-}
 
 /* ─── Reducer ─── */
 
-function cartReducer(state: CartState, action: CartAction): CartState {
+function cartReducer(state, action) {
   switch (action.type) {
     case "ADD_ITEM": {
       const existing = state.items.find(
@@ -93,7 +63,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
 const STORAGE_KEY = "food-explorer-cart";
 
-function loadCart(): CartItem[] {
+function loadCart() {
   if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -103,7 +73,7 @@ function loadCart(): CartItem[] {
   }
 }
 
-function saveCart(items: CartItem[]) {
+function saveCart(items) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   } catch {
@@ -113,9 +83,9 @@ function saveCart(items: CartItem[]) {
 
 /* ─── Context ─── */
 
-const CartContext = createContext<CartContextValue | undefined>(undefined);
+const CartContext = createContext(undefined);
 
-export function CartProvider({ children }: { children: ReactNode }) {
+export function CartProvider({ children }) {
   const [state, dispatch] = useReducer(cartReducer, { items: [] });
 
   /* Hydrate from localStorage on mount */
@@ -132,17 +102,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [state.items]);
 
   const addItem = useCallback(
-    (product: Product) => dispatch({ type: "ADD_ITEM", product }),
+    (product) => dispatch({ type: "ADD_ITEM", product }),
     []
   );
 
   const removeItem = useCallback(
-    (code: string) => dispatch({ type: "REMOVE_ITEM", code }),
+    (code) => dispatch({ type: "REMOVE_ITEM", code }),
     []
   );
 
   const updateQuantity = useCallback(
-    (code: string, quantity: number) =>
+    (code, quantity) =>
       dispatch({ type: "UPDATE_QUANTITY", code, quantity }),
     []
   );
@@ -150,7 +120,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearCart = useCallback(() => dispatch({ type: "CLEAR_CART" }), []);
 
   const isInCart = useCallback(
-    (code: string) => state.items.some((item) => item.product.code === code),
+    (code) => state.items.some((item) => item.product.code === code),
     [state.items]
   );
 
@@ -173,7 +143,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useCart(): CartContextValue {
+export function useCart() {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error("useCart must be used inside CartProvider");
   return ctx;

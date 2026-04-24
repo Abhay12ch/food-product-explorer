@@ -2,10 +2,9 @@
 
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
-import type { Product } from "@/types";
 
 /* ─── Nutrition-grade colour mapping ─── */
-const gradeColors: Record<string, string> = {
+const gradeColors = {
   a: "from-emerald-500 to-green-400",
   b: "from-lime-400 to-yellow-300",
   c: "from-yellow-400 to-amber-400",
@@ -13,7 +12,7 @@ const gradeColors: Record<string, string> = {
   e: "from-red-500 to-rose-500",
 };
 
-const gradeBg: Record<string, string> = {
+const gradeBg = {
   a: "bg-emerald-500/15 text-emerald-400 ring-emerald-500/30",
   b: "bg-lime-400/15 text-lime-300 ring-lime-400/30",
   c: "bg-yellow-400/15 text-yellow-300 ring-yellow-400/30",
@@ -21,7 +20,7 @@ const gradeBg: Record<string, string> = {
   e: "bg-red-500/15 text-red-400 ring-red-500/30",
 };
 
-export default function ProductCard({ product }: { product: Product }) {
+export default function ProductCard({ product }) {
   const { addItem, isInCart } = useCart();
   const inCart = isInCart(product.code);
 
@@ -36,7 +35,7 @@ export default function ProductCard({ product }: { product: Product }) {
   const ingredients =
     product.ingredients_text || product.ingredients_text_en || "";
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
     addItem(product);
@@ -63,27 +62,15 @@ export default function ProductCard({ product }: { product: Product }) {
           />
         ) : (
           <div className="flex h-full items-center justify-center">
-            <svg
-              className="h-16 w-16 text-slate-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1}
-                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-              />
+            <svg className="h-16 w-16 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
         )}
 
         {/* Nutrition grade badge */}
         {grade && (
-          <div
-            className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-xl font-bold text-sm uppercase ring-1 ${gradeBg[grade] || "bg-slate-500/15 text-slate-400 ring-slate-500/30"}`}
-          >
+          <div className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-xl font-bold text-sm uppercase ring-1 ${gradeBg[grade] || "bg-slate-500/15 text-slate-400 ring-slate-500/30"}`}>
             {grade.toUpperCase()}
           </div>
         )}
@@ -116,9 +103,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
         {/* Gradient overlay */}
         {grade && (
-          <div
-            className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${gradeColors[grade] || "from-slate-500 to-slate-400"}`}
-          />
+          <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${gradeColors[grade] || "from-slate-500 to-slate-400"}`} />
         )}
       </div>
 
@@ -127,11 +112,9 @@ export default function ProductCard({ product }: { product: Product }) {
         <h3 className="line-clamp-2 text-sm font-semibold leading-tight text-slate-100 transition-colors group-hover:text-indigo-300">
           {name}
         </h3>
-
         <span className="inline-flex w-fit items-center rounded-lg bg-indigo-500/10 px-2.5 py-0.5 text-[11px] font-medium text-indigo-300 ring-1 ring-indigo-500/20">
           {category}
         </span>
-
         {ingredients && (
           <p className="mt-auto line-clamp-2 text-xs leading-relaxed text-slate-400">
             {ingredients}

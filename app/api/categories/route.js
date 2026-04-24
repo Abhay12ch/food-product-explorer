@@ -3,8 +3,6 @@ import { fetchWithRetry } from "@/lib/fetchWithRetry";
 
 const BASE = "https://world.openfoodfacts.org";
 
-/* Hardcoded popular categories so the UI always has something even if the
-   massive categories.json call fails (it's ~40 MB and frequently times out). */
 const FALLBACK_CATEGORIES = [
   { id: "en:beverages", name: "Beverages", url: "", products: 200000 },
   { id: "en:snacks", name: "Snacks", url: "", products: 120000 },
@@ -33,7 +31,6 @@ export async function GET() {
     const url = `${BASE}/categories.json`;
     const res = await fetchWithRetry(url, { retries: 1, timeoutMs: 8000 });
     if (!res.ok) {
-      // Return fallback on HTTP error
       return NextResponse.json(
         { count: FALLBACK_CATEGORIES.length, tags: FALLBACK_CATEGORIES },
         { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
@@ -44,7 +41,6 @@ export async function GET() {
       headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" },
     });
   } catch {
-    // Return fallback categories instead of an error
     return NextResponse.json(
       { count: FALLBACK_CATEGORIES.length, tags: FALLBACK_CATEGORIES },
       { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300" } }

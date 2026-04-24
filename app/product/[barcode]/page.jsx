@@ -1,12 +1,7 @@
 import { fetchProductByBarcode } from "@/lib/api";
-import type { Metadata } from "next";
 import ProductDetail from "./ProductDetail";
 
-interface Props {
-  params: Promise<{ barcode: string }>;
-}
-
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params }) {
   const { barcode } = await params;
   try {
     const data = await fetchProductByBarcode(barcode);
@@ -20,11 +15,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function ProductPage({ params }: Props) {
+export default async function ProductPage({ params }) {
   const { barcode } = await params;
 
   let product = null;
-  let error: string | null = null;
+  let error = null;
 
   try {
     const data = await fetchProductByBarcode(barcode);

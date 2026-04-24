@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ExplorerProvider } from "@/context/ExplorerContext";
 import { CartProvider } from "@/context/CartContext";
@@ -11,32 +10,21 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "Food Product Explorer | Discover & Compare Food Products",
   description:
     "Explore thousands of food products worldwide. Search by name or barcode, filter by category, and compare nutrition grades with data from OpenFoodFacts.",
   keywords: [
-    "food",
-    "nutrition",
-    "barcode",
-    "ingredients",
-    "OpenFoodFacts",
-    "product explorer",
+    "food", "nutrition", "barcode", "ingredients", "OpenFoodFacts", "product explorer",
   ],
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        {/* Ambient background effects */}
         <div className="ambient-bg" />
         <div className="noise-overlay" />
-
         <ExplorerProvider>
           <CartProvider>
             <ClientLayout>{children}</ClientLayout>

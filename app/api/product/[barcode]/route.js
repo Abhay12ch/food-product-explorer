@@ -1,30 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { fetchWithRetry, isValidBarcode } from "@/lib/fetchWithRetry";
 
 const BASE = "https://world.openfoodfacts.org";
 
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ barcode: string }> }
-) {
+export async function GET(_request, { params }) {
   const { barcode } = await params;
 
-  /* Validate barcode format */
   if (!isValidBarcode(barcode)) {
-    return NextResponse.json(
-      { error: "Invalid barcode format. Must be 8-14 digits." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid barcode format. Must be 8-14 digits." }, { status: 400 });
   }
 
   try {
     const url = `${BASE}/api/v0/product/${barcode}.json`;
     const res = await fetchWithRetry(url);
     if (!res.ok) {
-      return NextResponse.json(
-        { error: `OpenFoodFacts returned ${res.status}` },
-        { status: res.status }
-      );
+      return NextResponse.json({ error: `OpenFoodFacts returned ${res.status}` }, { status: res.status });
     }
     const data = await res.json();
     return NextResponse.json(data, {
